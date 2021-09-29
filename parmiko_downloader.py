@@ -13,13 +13,14 @@ from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
 
 class sftp_downloader():
 
-    def __init__(self, remotePath, localPath, username, password) -> None:
+    def __init__(self, remotePath, localPath, username, password, skipVideos=False) -> None:
         super().__init__()
         self.host = "sftp.bitport.io"
         self.port = 2022
         self.transport = paramiko.Transport((self.host, self.port))
         #Create a Transport object
 
+        self.skipVideos = skipVideos
         self.localPath = localPath
         self.password = password
         self.username = username
@@ -65,7 +66,7 @@ class sftp_downloader():
             self.local_size = os.path.getsize(full_path)
         except:
             self.local_size = 0
-        if filename[-3:] in ["mp4", "mkv"]:
+        if filename[-3:] in ["mp4", "mkv"] and self.skipVideos:
                 print("Skipping b/c large video file")
                 self.printer(remotepath, filename, remote_size)
                 return True
@@ -129,7 +130,7 @@ remotePath = "/"
 localPath = "/Users/maxteicheira/Downloads/Bitport"
 username = "max.teicheira@gmail.com"
 password = "smashy1"
-conn = sftp_downloader(remotePath, localPath, username, password)
+conn = sftp_downloader(remotePath, localPath, username, password, skipVideos=True)
 
 conn.get_all(remotePath, localPath)
 
