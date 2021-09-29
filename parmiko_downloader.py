@@ -1,4 +1,4 @@
-from operator import truediv
+# from operator import truediv
 from os import name
 import paramiko
 import os.path
@@ -13,15 +13,16 @@ from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
 
 class sftp_downloader():
 
-    def __init__(self) -> None:
+    def __init__(self, remotePath, localPath, username, password) -> None:
         super().__init__()
         self.host = "sftp.bitport.io"
         self.port = 2022
         self.transport = paramiko.Transport((self.host, self.port))
         #Create a Transport object
 
-        self.password = "smashy1"
-        self.username = "max.teicheira@gmail.com"
+        self.localPath = localPath
+        self.password = password
+        self.username = username
         self.transport.connect(username = self.username, password = self.password)
         #Connect to a Transport server
         self.sftp = paramiko.SFTPClient.from_transport(self.transport)
@@ -29,7 +30,7 @@ class sftp_downloader():
 
         self.widgets = ['Downloading: ', Percentage(), ' ',
                         Bar(marker='#',left='[',right=']'),
-                        ' ', ETA(), ' ', FileTransferSpeed()]
+                        ' ', ETA(), ' ', FileTransferSpeed(), ' ', Counter()]
         #Progress bar inits
 
     def sftp_walk(self, remotepath):
@@ -54,40 +55,36 @@ class sftp_downloader():
 
 
     def display(self, in_bytes, total_bytes):
-        # print(in_bytes/total_bytes*100)
         self.bar.update(in_bytes)
     ##Was experimenting with display as class to persist the progressbar object
 
     def does_file_exist_and_finished(self, remotepath, filename, remote_size):
-        full_path = os.path.join(remotepath,filename)
+        full_path = os.path.join(self.localPath, remotepath,filename)
         # print(full_path)
-        # if filename[-3:] in ["mp4", "mkv"]:
-        #         print("Skipping b/c large video file")
-        #         self.printer(remotepath, filename, remote_size)
-        #         return True
+        try:
+            self.local_size = os.path.getsize(full_path)
+        except:
+            self.local_size = 0
+        if filename[-3:] in ["mp4", "mkv"]:
+                print("Skipping b/c large video file")
+                self.printer(remotepath, filename, remote_size)
+                return True
         if os.path.exists(full_path):
             print("File exists")
             self.printer(remotepath, filename, remote_size)
-            # print("Local file size: ", os.path.getsize(full_path))
-            # print("Remote file size: " + str(remote_size))
-            # print("Filetype: " + filename[-3:])
-            if os.path.getsize(full_path) == remote_size:
+            if self.local_size >= remote_size:
                 # print(filename[-3:])
+                print("File fully downloaded")
                 return True
         else:
             print("File does not exist")
             self.printer(remotepath, filename, remote_size)
-            # print("Filename: " + filename)
-            # print("Filetype: " + filename[-3:])
         return False
 
     def printer(self, remotepath, filename, remote_size):
         full_path = os.path.join(remotepath,filename)
-        try:
-            local_size = os.path.getsize(full_path)
-        except:
-            local_size = 0
-        print("Local file size: ", local_size)
+        print(filename)
+        print("Local file size: ", self.local_size)
         print("Remote file size: " + str(remote_size))
         print("Filetype: " + filename[-3:])
     
@@ -115,26 +112,26 @@ class sftp_downloader():
                     self.current_file_path_and_name = self.sftp.stat(os.path.join(walker[0],file))
                     print("\n\n")
                     print('*'*80)
-                    # print(file)
                     if not self.does_file_exist_and_finished(walker[0], file, self.current_file_path_and_name.st_size):
                         self.bar = ProgressBar( widgets=self.widgets, max_value=self.current_file_path_and_name.st_size)
-                        # print(self.current_file_path_and_name.st_size)
                         self.bar.start()
                         self.sftp.get(os.path.join(walker[0],file),os.path.join(localpath,walker[0],file),callback=self.display)
                         self.bar.finish()
-                    else:
-                        print("Already Downloaded")
+                    # else:
+                    #     print("Already Downloaded")
                         
 
 
 
 
 
-path = "/"
-localpath = "/Users/maxteicheira/Downloads/Bitport"
-conn = sftp_downloader()
+remotePath = "/"
+localPath = "/Users/maxteicheira/Downloads/Bitport"
+username = "max.teicheira@gmail.com"
+password = "smashy1"
+conn = sftp_downloader(remotePath, localPath, username, password)
 
-conn.get_all(path, localpath)
+conn.get_all(remotePath, localPath)
 
 conn.sftp.close()
 conn.transport.close()
